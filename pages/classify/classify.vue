@@ -7,7 +7,11 @@
 </template>
 
 <script setup>
-	
+	const goClassList = ()=>{
+		uni.navigateTo({
+			url:'/pages/classify/classList'
+		})
+	}
 </script>
 
 <style lang="scss" >

@@ -1,23 +1,17 @@
 <template>
-	<view class="homeLayout">
+	<view class="homeLayout pageBg">
+		<custom-nav-bar></custom-nav-bar>
 		<view class="banner">
 			<swiper indicator-dots autoplay indicator-color="rgba(255,255,255,0.5)" indicator-active-color="#fff"
 				circular class="swiper">
-				<swiper-item>
+				<swiper-item v-for="item in bannerList" :key="item._id">
 					<view class="swiper-item">
-						<image src="../../common/images/banner1.jpg" mode="aspectFill"></image>
+						<image :src="item.picurl" mode="aspectFill"></image>
 					</view>
 				</swiper-item>
-				<swiper-item>
-					<view class="swiper-item">
-						<image src="../../common/images/banner2.jpg" mode="aspectFill"></image>
-					</view>
-				</swiper-item>
-				<swiper-item>
-					<view class="swiper-item">
-						<image src="../../common/images/banner3.jpg" mode="aspectFill"></image>
-					</view>
-				</swiper-item>
+
+
+
 			</swiper>
 		</view>
 		<view class="notice">
@@ -27,8 +21,8 @@
 			</view>
 			<view class="center">
 				<swiper autoplay interval="1500" duration="300" circular vertical>
-					<swiper-item v-for="(item,index) in 4">
-						<view class="swiper-item">{{index}} 文字文字文字文字文字文字文字文字文字文字
+					<swiper-item v-for="(item,index) in noticeList" :key="item._id">
+						<view class="swiper-item">{{item.title}}
 						</view>
 					</swiper-item>
 				</swiper>
@@ -53,9 +47,11 @@
 			</common-title>
 			<view class="content">
 				<scroll-view scroll-x>
-					<view class="box" v-for="item in 8">
-						<image src="../../common/images/preview_small.webp" mode="aspectFill"></image>
-					</view>
+					<template v-for="item in randomList" :key="item._id">
+						<view class="box" @click="goPreview">
+							<image :src="item.smallPicurl" mode="aspectFill"></image>
+						</view>
+					</template>
 				</scroll-view>
 			</view>
 		</view>
@@ -69,7 +65,7 @@
 				</template>
 			</common-title>
 			<view class="content">
-				<theme-item v-for="item in 8"></theme-item>
+				<theme-item v-for="item in classifyList" :key="item._id" :item="item"></theme-item>
 				<theme-item :isMore="true"></theme-item>
 			</view>
 		</view>
@@ -77,7 +73,48 @@
 </template>
 
 <script setup>
+	import serverApi from '@/api/apis.js';
+	import {
+		ref
+	} from 'vue';
+	const goPreview = () => {
+		uni.navigateTo({
+			url: '/pages/preview/preview'
+		})
+	}
+	const bannerList = ref([]);
+	const randomList = ref([]);
+	const noticeList = ref([]);
+	const classifyList = ref([]);
 
+	const getBanner = async () => {
+		let res = await serverApi.apiGetBanner();
+		bannerList.value = res.data;
+	}
+
+	const getDayRandom = async () => {
+		let res = await serverApi.apiGetDayRandom();
+		randomList.value = res.data
+	}
+
+	const getNotice = async () => {
+		let res = await serverApi.apiGetNotice({
+			select: true
+		});
+		noticeList.value = res.data
+	}
+
+	const getClassify = async () => {
+		let res = await serverApi.apiGetClassify({
+			select: true
+		});
+		classifyList.value = res.data
+	}
+
+	getBanner();
+	getDayRandom();
+	getNotice();
+	getClassify();
 </script>
 
 <style lang="scss" scoped>
@@ -211,13 +248,13 @@
 				color: #888;
 
 			}
-			
-			.content{
+
+			.content {
 				margin-top: 30rpx;
 				padding: 0 30rpx;
 				display: grid;
 				gap: 15rpx;
-				grid-template-columns: repeat(3,1fr);
+				grid-template-columns: repeat(3, 1fr);
 			}
 		}
 	}
