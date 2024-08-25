@@ -1,15 +1,15 @@
 <template>
-	<view class="preview">
-		<swiper circular @click="maskChange">
-			<swiper-item v-for="item in 5">
-				<image src="../../common/images/preview1.jpg" mode="aspectFill"></image>
+	<view class="preview" v-bind="$attrs">
+		<swiper circular :current="currentIndex" @change="swiperChange">
+			<swiper-item v-for="item in classList" :key="item._id">
+				<image :src="item.picUrl" mode="aspectFill" @click="maskChange"></image>
 			</swiper-item>
 		</swiper>
 		<view class="mask" v-show="maskState">
 			<view class="goBack" @click="goBack" :style="{top:getStatusBarHeight()+'px'}">
 				<uni-icons type="back" color="#fff" size="20"></uni-icons>
 			</view>
-			<view class="count">3 / 9</view>
+			<view class="count">{{currentIndex +1 }} / {{classList.length}}</view>
 			<view class="time">
 				<uni-dateformat :date="new Date()" format="hh:mm"></uni-dateformat>
 			</view>
@@ -114,21 +114,39 @@
 
 <script setup>
 	import {
-		ref
+		ref,
+		useAttrs
 	} from 'vue'
 	import {
 		getStatusBarHeight
 	} from '@/utils/system.js'
+	import {
+		onLoad
+	} from '@dcloudio/uni-app'
 	
+	console.log(useAttrs());	
 	const maskState = ref(true);
 	const infoPopup = ref(null);
 	const scorePopup = ref(null);
 	const userScore = ref(0)
+	const StrClassList = uni.getStorageSync('classList') || []
+	const classList = ref([])
+	classList.value = StrClassList.map((item) => {
+		return {
+			...item,
+			picUrl: item.smallPicurl.replace("_small.webp", ".jpg")
+		}
+	})
+	const currentIndex = ref(0)
+	const maskChange = (e) => {
 
-	const maskChange = () => {
 		maskState.value = !maskState.value
-	}
 
+	}
+	const swiperChange = (e) => {
+		console.log(e);
+		currentIndex.value = e.detail.current
+	}
 	const clickInfoPopup = () => {
 		infoPopup.value.open()
 	}
@@ -151,6 +169,11 @@
 	const goBack = () => {
 		uni.navigateBack()
 	}
+
+	onLoad((e) => {
+		const id = e.id || ''
+		currentIndex.value = (classList.value.findIndex(item => item._id === id)) || 0
+	})
 </script>
 
 <style scoped lang="scss">

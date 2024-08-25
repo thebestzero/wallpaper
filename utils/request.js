@@ -8,7 +8,7 @@ export function request(config = {}) {
 		method = "GET",
 	} = config
 	url = BASE_URL + url
-	header['access-key'] = "zsd@1997%"
+	header['access-key'] = "zad@mail.com"
 	return new Promise((resolve, reject) => {
 			uni.request({
 					url,
@@ -26,7 +26,7 @@ export function request(config = {}) {
 							})
 							reject(res.data)
 						} else {
-							uni.showModal({
+							uni.showToast({
 								title: res.data.errMsg,
 								showCancel: false
 							})
