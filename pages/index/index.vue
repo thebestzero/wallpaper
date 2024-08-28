@@ -78,6 +78,7 @@
 		ref
 	} from 'vue';
 	const goPreview = () => {
+		uni.setStorageSync('classList',randomList.value)
 		uni.navigateTo({
 			url: '/pages/preview/preview'
 		})

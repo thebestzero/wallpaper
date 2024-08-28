@@ -24,13 +24,13 @@ export function request(config = {}) {
 								content: res.data.errMsg,
 								showCancel: false
 							})
-							reject(res.data)
+							resolve(res.data)
 						} else {
 							uni.showToast({
 								title: res.data.errMsg,
 								showCancel: false
 							})
-							reject(res.data)
+							resolve(res.data)
 						}
 					},
 					fail(err) {

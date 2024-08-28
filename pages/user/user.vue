@@ -1,5 +1,6 @@
 <template>
 	<view class="userLayout pageBg">
+		<view :style="{height:getNavBarHeight() + 'px'}"></view>
 		<view class="userInfo">
 			<view class="avater">
 				<image src="../../static/images/xxmLogo.png" mode="aspectFill"></image>
@@ -81,7 +82,7 @@
 </template>
 
 <script setup>
-
+import { getNavBarHeight } from '@/utils/system.js'
 const clickContact = ()=>{
 	uni.makePhoneCall({
 		phoneNumber:"114"

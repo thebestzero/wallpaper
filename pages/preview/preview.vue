@@ -1,8 +1,9 @@
 <template>
-	<view class="preview" v-bind="$attrs">
+	<view class="preview" v-if="currentInfo  ">
 		<swiper circular :current="currentIndex" @change="swiperChange">
-			<swiper-item v-for="item in classList" :key="item._id">
-				<image :src="item.picUrl" mode="aspectFill" @click="maskChange"></image>
+			<swiper-item v-for="(item,index) in classList" :key="item._id">
+				<image v-if="readImgsList.includes(index)" :src="item.picUrl" mode="aspectFill" @click="maskChange">
+				</image>
 			</swiper-item>
 		</swiper>
 		<view class="mask" v-show="maskState">
@@ -24,11 +25,11 @@
 
 				<view class="box" @click="clickScorePopup">
 					<uni-icons type="star" size="28"></uni-icons>
-					<view class="text">5分</view>
+					<view class="text">{{currentInfo.score}}分</view>
 				</view>
 
 				<view class="box">
-					<uni-icons type="download" size="23"></uni-icons>
+					<uni-icons type="download" size="23" @click="downloadImage"></uni-icons>
 					<view class="text">下载</view>
 				</view>
 			</view>
@@ -47,38 +48,38 @@
 				<view class="content">
 					<view class="row">
 						<view class="label">壁纸ID：</view>
-						<text selectable class="value">12312312adfa</text>
+						<text selectable class="value">{{currentInfo._id}}</text>
 					</view>
-
+					<!-- 
 					<view class="row">
 						<view class="label">分类：</view>
-						<text class="value class">明星美女</text>
-					</view>
+						<text class="value class">{{currentInfo.classid}}</text>
+					</view> -->
 
 					<view class="row">
 						<view class="label">发布者：</view>
-						<text class="value">咸虾米</text>
+						<text class="value">{{currentInfo.nickname}}</text>
 					</view>
 
 					<view class="row">
 						<text class="label">评分：</text>
 						<view class='value roteBox'>
 							<uni-rate readonly touchable value="3.5" size="16" />
-							<text class="score">5分</text>
+							<text class="score">{{currentInfo.score}}</text>
 						</view>
 					</view>
 
 					<view class="row">
 						<text class="label">摘要：</text>
 						<view class='value'>
-							摘要文字内容填充部分，摘要文字内容填充部分，摘要文字内容填充部分，摘要文字内容填充部分。
+							{{currentInfo.description}}
 						</view>
 					</view>
 
 					<view class="row">
 						<text class="label">标签：</text>
 						<view class='value tabs'>
-							<view class="tab" v-for="item in 3">标签名</view>
+							<view class="tab" v-for="item in currentInfo.tabs" :key="item">{{item}}</view>
 						</view>
 					</view>
 
@@ -86,6 +87,7 @@
 						声明：本图片来用户投稿，非商业使用，用于免费学习交流，如侵犯了您的权益，您可以拷贝壁纸ID举报至平台，邮箱513894357@qq.com，管理将删除侵权壁纸，维护您的权益。
 
 					</view>
+					<view class="safe-area-inset-bottom"></view>
 				</view>
 			</scroll-view>
 		</view>
@@ -94,7 +96,7 @@
 		<view class="scorePopup">
 			<view class="popHeader">
 				<view></view>
-				<view class="title">壁纸评分</view>
+				<view class="title">{{isScore ? '评分过了~' : '壁纸评分'}}</view>
 				<view class="close" @click="clickScoreClose">
 					<uni-icons type="closeempty" size="18" color="#999"></uni-icons>
 				</view>
@@ -106,7 +108,8 @@
 			</view>
 
 			<view class="footer">
-				<button @click="submitScore" :disabled="!userScore" type="default" size="mini" plain>确认评分</button>
+				<button @click="submitScore" :disabled="!userScore || isScore" type="default" size="mini"
+					plain>确认评分</button>
 			</view>
 		</view>
 	</uni-popup>
@@ -114,6 +117,7 @@
 
 <script setup>
 	import {
+		computed,
 		ref,
 		useAttrs
 	} from 'vue'
@@ -121,16 +125,23 @@
 		getStatusBarHeight
 	} from '@/utils/system.js'
 	import {
-		onLoad
+		onLoad,
+		onShareAppMessage,
+		onShareTimeline,
+		onUnload
 	} from '@dcloudio/uni-app'
-	
-	console.log(useAttrs());	
+	import serverApi from '../../api/apis.js'
+	import path from 'node:path/posix';
+
+	console.log(useAttrs());
 	const maskState = ref(true);
 	const infoPopup = ref(null);
 	const scorePopup = ref(null);
 	const userScore = ref(0)
 	const StrClassList = uni.getStorageSync('classList') || []
 	const classList = ref([])
+	const readImgsList = ref([])
+	const isScore = ref(false)
 	classList.value = StrClassList.map((item) => {
 		return {
 			...item,
@@ -138,14 +149,16 @@
 		}
 	})
 	const currentIndex = ref(0)
+
+	const currentInfo = ref(null)
 	const maskChange = (e) => {
-
 		maskState.value = !maskState.value
-
 	}
 	const swiperChange = (e) => {
 		console.log(e);
 		currentIndex.value = e.detail.current
+		currentInfo.value = classList.value[currentIndex.value]
+		readImgs()
 	}
 	const clickInfoPopup = () => {
 		infoPopup.value.open()
@@ -155,6 +168,14 @@
 		infoPopup.value.close()
 	}
 	const clickScorePopup = () => {
+
+		if (currentInfo.value.userScore) {
+			isScore.value = true
+			userScore.value = currentInfo.value.userScore
+		} else {
+			isScore.value = false
+			userScore.value = 0
+		}
 		scorePopup.value.open()
 	}
 
@@ -162,17 +183,182 @@
 		scorePopup.value.close()
 	}
 
-	const submitScore = () => {
-		console.log(123);
+	const submitScore = async () => {
+		uni.showLoading({
+			title: '加载中...'
+		})
+		const {
+			classid,
+			_id: wallId
+		} = currentInfo.value
+
+		let res = await serverApi.apiGetSetupScore({
+			classid,
+			wallId,
+			userScore: userScore.value
+		})
+
+		uni.hideLoading()
+
+		if (res.errCode === 0) {
+			uni.showToast({
+				title: "评分成功",
+				icon: "none"
+			})
+			classList.value[currentIndex.value].userScore = userScore.value;
+			uni.setStorageSync("storgClassList", classList.value);
+
+		}
+		clickScoreClose();
 	}
 
 	const goBack = () => {
-		uni.navigateBack()
+		uni.navigateBack({
+			fail() {
+				uni.reLaunch({
+					url: '/pages/index/index'
+				})
+			}
+		})
 	}
 
-	onLoad((e) => {
+	onLoad(async (e) => {
 		const id = e.id || ''
+		if (e.type == 'share') {
+			let res = await serverApi.apiDetailWall({
+				id
+			});
+			classList.value = res.data.map(item => {
+				return {
+					...item,
+					picUrl: item.smallPicurl.replace("_small.webp", ".jpg")
+				}
+			})
+		}
+
 		currentIndex.value = (classList.value.findIndex(item => item._id === id)) || 0
+		currentInfo.value = classList.value[currentIndex.value] || {}
+		readImgs()
+	})
+
+	function readImgs() {
+		const curIndex = currentIndex.value
+		readImgsList.value.push(
+			curIndex <= 0 ? classList.value.length - 1 : curIndex - 1,
+			curIndex,
+			curIndex >= classList.value.length - 1 ? 0 : curIndex + 1
+		)
+		readImgsList.value = [...new Set(readImgsList.value)]
+	}
+
+	const downloadImage = async () => {
+		// #ifdef H5
+		uni.showModal({
+			content: "请长按保存壁纸",
+			showCancel: false
+		})
+		// #endif
+
+		// #ifndef H5
+		try {
+			uni.showLoading({
+				mask: true,
+				title: '下载中...'
+			})
+			let {
+				classid,
+				_id: wallId
+			} = currentInfo.value;
+			let res = await serverApi.apiWriteDownload({
+				classid,
+				wallId
+			})
+			if (res.errCode != 0) throw res;
+			// 获取下载图片临时地址
+			uni.getImageInfo({
+				src: currentInfo.value.picUrl,
+				success(res) {
+					// 微信自带授权下载图片
+					uni.saveImageToPhotosAlbum({
+						filePath: res.path,
+						success() {
+							uni.showToast({
+								title: "保存成功，请到相册查看",
+								icon: "none"
+							})
+						},
+						fail(err) {
+							// 授权成功取消保存
+							if (err.errMsg === "saveImageToPhotosAlbum:fail cancel") {
+								console.log(err);
+								uni.showToast({
+									title: '保存失败，请重新点击下载',
+									icon: "none"
+								})
+								return;
+							}
+							// 授权失败，手动授权
+							// 调起客户端小程序设置界面，返回用户设置的操作结果。
+							uni.showModal({
+								title: "授权提示",
+								content: "需要授权保存相册",
+								success(res) {
+									if (res.confirm) {
+										uni.openSetting({
+											success(setting) {
+												console.log(setting);
+												if (setting
+													.authSetting[
+														'scope.writePhotosAlbum'
+													]) {
+													uni.showToast({
+														title: "获取授权成功",
+														icon: "none"
+													})
+												} else {
+													uni.showToast({
+														title: "获取权限失败",
+														icon: "none"
+													})
+												}
+											}
+										})
+									}
+								}
+							})
+
+						},
+					})
+				},
+				complete() {
+					uni.hideLoading()
+				}
+			})
+		} catch (err) {
+			console.error(err)
+			uni.hideLoading()
+		}
+		// #endif
+	}
+
+	//分享给好友
+	onShareAppMessage(() => {
+		return {
+			title: '壁纸',
+			path: '/pages/preview/preview?id=' + currentInfo.value._id + '&type=share'
+		}
+	})
+
+	//分享朋友圈
+	onShareTimeline(() => {
+		return {
+			title: "咸虾米壁纸",
+			query: "id=" + currentInfo.value._id + "&type=share"
+		}
+	})
+
+	onUnload(() => {
+		uni.removeStorageSync('classList')
 	})
 </script>
 
